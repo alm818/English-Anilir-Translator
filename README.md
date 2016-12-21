@@ -1,6 +1,11 @@
 # English-Anilir-Translator
 The rule-based machine translation from English to Anilir (A constructed language)
 
+Requirement:
+	Python 3.5+
+	nltk 3
+	flask
+	
 To generate new words from our language, add these words into the file "word_needed.txt"
 Then run the "generator.py"
 
