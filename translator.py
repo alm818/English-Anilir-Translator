@@ -1,7 +1,13 @@
 import nltk
-
+from nltk.draw.tree import TreeView
+from nltk.draw import TreeWidget
+from nltk.draw.util import CanvasFrame
 from nltk.corpus import wordnet as wn
 from enum import Enum
+import copy
+import os
+import csv
+from generator import Generator
 
 class Constant:
 	PRES = 'ma'
@@ -204,6 +210,59 @@ class Translator:
 		self.pos_tag = nltk.pos_tag(self.tokenized)
 		self.remove_have()
 		self.tagging()
+		"""	VP -> VP CC VP | V | VP NP | VP PP | VP Adv | V VBG | VP TO VP | VP AP
+	NP -> N | CD N | AP N | DT N | CD AP N | DT AP N | DT CD N | DT CD AP N | NP CC NP | PRP | NP PP | NP RelClause | DP
+	RelClause -> Rel S | Rel VP | Rel AuxV VP | Rel AuxV RB VP
+	Rel -> "who" | "that" | "which"
+	PP -> PP P NP | P NP | P
+	P -> IN | TO
+	AP -> AP A | A | AP CC A
+	Adv -> RB | RBR | RBS
+	A -> JJ | JJR | JJS
+	N -> NN | NNS | NNP | NNPS
+	V -> VBD | VBN | VBP | VBZ | VB | VBG
+	DP -> "that" | "this" | "these" | "those"
+	"""
+	def finalize(self):
+		f = open('dictionary.csv', 'r')
+		reader = csv.DictReader(f)
+		dic = {}
+		for line in reader:
+			dic[line['word']] = line['translation']
+		gen = Generator()
+		# for line in fi:
+		# 	word = line.strip().lower()
+		# 	if word in dic:
+		# 		pass
+		# 		#print(dic[word])
+		# 	else:
+		# 		new = gen.make_word(gen.count_sound(word))
+		# 		res = gen.represent(new)
+		# 		dic[word] = res
+		# 		print(word.lower(), res)
+		self.gloss = ' '.join(self.res)
+		self.res = ''
+		st = None
+		for index, c in enumerate(self.gloss):
+			if st == None and c == '<':
+				st = index
+			elif st != None and c == '>':
+				word = self.gloss[st+1:index]
+				if word in dic:
+					self.res += dic[word]
+				else:
+					new = gen.make_word(gen.count_sound(word))
+					res = gen.represent(new)
+					dic[word] = res
+					self.res += dic[word]
+					fw = open('dictionary.csv', 'w')
+					fw.write('word,translation,phonology\n')
+					for word in sorted(dic):
+						fw.write(word.lower() + ',' + dic[word] + ',' + gen.phonorepr(dic[word]) + '\n')
+				st = None
+			elif st == None:
+				self.res += c
+		self.phonology = gen.phonorepr(self.res)
 	def remove_have(self):
 		is_start = None
 		remove_index = []
@@ -228,6 +287,7 @@ class Translator:
 				new_tokenized.append(self.tokenized[index])
 		self.pos_tag = new_pos_tag
 		self.tokenized = new_tokenized
+		print(self.tokenized)
 		print(self.pos_tag)
 	def is_question(self):
 		return self.tokenized[-1][0] == '?'
@@ -255,9 +315,24 @@ class Translator:
 		return parser
 	def question_tree(self):
 		parser = self.cfg_parser(CFG.question)
+		self.res = None
 		for tree in parser.parse(self.tokenized):
 			tree.pretty_print()
-			print(self.question_translate(tree))
+			if self.res == None:
+				self.res = self.question_translate(tree)
+				print(self.res)
+			else:
+				print(self.question_translate(tree))
+	def statement_tree(self):
+		parser = self.cfg_parser(CFG.statement)
+		self.res = None
+		for tree in parser.parse(self.tokenized):
+			tree.pretty_print()
+			if self.res == None:
+				self.res = self.statement_translate(tree)
+				print(self.res)
+			else:
+				print(self.statement_translate(tree))
 	def question_translate(self, tree):
 		result = []
 		auxP = None
@@ -329,11 +404,6 @@ class Translator:
 				article += Constant.NEG
 			result += np + [article] + main_verbs['be']
 		return result
-	def statement_tree(self):
-		parser = self.cfg_parser(CFG.statement)
-		for tree in parser.parse(self.tokenized):
-			tree.pretty_print()
-			print(self.statement_translate(tree))
 	def statement_translate(self, tree, is_rel=False):
 		result = []
 		neg = False
@@ -508,6 +578,7 @@ class Translator:
 					a = to_translate(self.lemmatizer.lemmatize(word, 'a')) + Constant.SUP
 				result += [a]
 		return result
-sent = input()
-trans = Translator(sent)
-trans.translate()
+if __name__ == '__main__':
+	sent = input()
+	trans = Translator(sent)
+	trans.translate()

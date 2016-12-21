@@ -50,14 +50,19 @@ class Generator:
 	def phonorepr(self, ortho):
 		s = ''
 		for c in ortho:
+			is_added = False
 			for vowel in self.abc.VOWEL:
 				if vowel.ortho == c:
 					s += vowel.phono
+					is_added = True
 					break
 			for conso in self.abc.CONSO:
 				if conso.ortho == c:
 					s += conso.phono
+					is_added = True
 					break
+			if not is_added:
+				s += c
 		return s
 if __name__ == '__main__':
 	f = open('dictionary.csv', 'r')
