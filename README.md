@@ -2,8 +2,8 @@
 The rule-based machine translation from English to Anilir (A constructed language)
 
 Requirement:
-	Python 3.5+
-	nltk 3
+	Python 3.5+<br>
+	nltk 3<br>
 	flask
 	
 To generate new words from our language, add these words into the file "word_needed.txt"
